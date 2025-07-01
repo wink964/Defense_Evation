@@ -1,0 +1,102 @@
+WSL2 + K3s Kubernetes Setup on Windows
+🔧 Prerequisites
+
+    ✅ Windows 10/11 with WSL2 enabled
+
+    ✅ Installed Ubuntu (or Debian) via Microsoft Store
+
+    ✅ Basic familiarity with bash and sudo
+
+⚙️ Step 1: Enable WSL2 (if not already)
+
+In PowerShell (admin):
+
+wsl --install
+
+If already installed:
+
+wsl --set-default-version 2
+
+Then install Ubuntu from the Microsoft Store.
+🛠 Step 2: Set up Ubuntu for K3s
+
+Launch Ubuntu from Start menu and run:
+
+sudo apt update && sudo apt upgrade -y
+
+Install dependencies:
+
+sudo apt install -y curl wget apt-transport-https ca-certificates gnupg lsb-release
+
+🚀 Step 3: Install K3s (Single-Node Lightweight Kubernetes)
+
+Install K3s using the official install script:
+
+curl -sfL https://get.k3s.io | sh -
+
+    This will install K3s as a service and start the cluster.
+
+To check the status:
+
+sudo k3s kubectl get nodes
+
+✅ You should see a node named localhost in Ready state.
+🧰 Step 4: Use kubectl Outside Root
+
+Make kubectl available to your user:
+
+mkdir -p ~/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+
+Now you can use:
+
+k3s kubectl get pods -A
+# or symlink it
+sudo ln -s /usr/local/bin/k3s /usr/local/bin/kubectl
+
+Now kubectl get pods -A works without typing k3s before.
+🧪 Step 5: Test a Deployment
+
+Try deploying a sample pod:
+
+kubectl create deployment evilpod --image=alpine
+kubectl exec -it deploy/evilpod -- sh
+
+From here you can simulate attacker behavior like reverse shells, C2 agents, hidden jobs, etc.
+⚙️ Optional: Expose Services in WSL2
+
+To expose services to your Windows host, you can:
+
+    Find WSL IP:
+
+ip addr show eth0 | grep inet
+
+Use that IP from Windows side, or run:
+
+    sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+Let me know if you want to automate service exposure from K3s → Windows.
+💀 Ready to Simulate T1610: Deploy a Container
+
+With K3s up in WSL2, you can now:
+
+    Deploy attacker pods
+
+    Use DaemonSets for persistence
+
+    Abuse namespaces, secrets, or hidden sidecars
+
+    Simulate lateral movement inside the cluster
+
+Let me know what you want next:
+
+    ☣️ Reverse shell pod
+
+    📦 Malicious Job for one-shot execution
+
+    🐚 Lateral movement inside cluster
+
+    🔒 Persistence through initContainers or CronJobs
+
+I’ll build it for you.
