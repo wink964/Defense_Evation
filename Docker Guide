@@ -1,0 +1,75 @@
+Docker:
+
+
+Prerequisites
+
+Before installing Docker Desktop:
+
+    Windows 10/11 Pro, Enterprise, or Education (Build 19044+ preferred)
+
+        Home edition works too, but only with WSL2 (Windows Subsystem for Linux).
+
+    Enable WSL 2 and Virtualization in BIOS.
+
+🧱 Step-by-Step: Install Docker on Windows
+1. ✅ Enable WSL 2 and Virtualization
+
+Open PowerShell as Administrator and run:
+
+wsl --install
+
+If wsl is not recognized, follow this WSL install guide.
+https://learn.microsoft.com/en-us/windows/wsl/install
+
+Check WSL version:
+
+wsl --list --verbose
+
+If your distro isn’t using version 2, upgrade it:
+
+wsl --set-version <distro-name> 2
+
+Also ensure Virtualization is enabled in BIOS (usually on by default).
+2. 💾 Download Docker Desktop
+
+Download Docker Desktop from the official source:
+👉 https://www.docker.com/products/docker-desktop/
+3. 🧰 Install Docker Desktop
+
+    Run the installer.
+
+    During installation, ensure these options are checked:
+
+        Install required Windows components for WSL 2
+
+        Use WSL 2 instead of Hyper-V (recommended for most setups)
+
+    Reboot when prompted.
+
+4. 🔄 Start Docker Desktop
+
+    Launch Docker Desktop from the Start menu.
+
+    Wait for it to initialize — the whale icon will appear in the system tray.
+
+    You might need to sign in or create a Docker Hub account, but it’s optional.
+
+5. 🧪 Test Docker
+
+Open PowerShell or Command Prompt, then test:
+
+docker --version
+
+Run a test container:
+
+docker run hello-world
+
+If you see a welcome message, Docker is running correctly.
+📦 Optional: Pull a Linux Image
+
+You’ll likely use Linux containers for evasion labs:
+
+docker pull ubuntu
+docker run -it ubuntu /bin/bash
+
+Now you’re inside an Ubuntu container, ready to mess around.
